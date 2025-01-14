@@ -1,2 +1,0 @@
-[napari.manifest]
-mitoanalyzer-napari = mitoanalyzer_napari:napari.yaml
