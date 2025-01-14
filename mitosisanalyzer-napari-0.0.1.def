@@ -1,0 +1,96 @@
+Bootstrap: docker
+
+From: pytorch/pytorch:latest
+
+%setup
+    ID=$(id -u)
+
+%files
+    /usr/share/fonts /usr/share/fonts
+
+%post
+    apt-get -y update
+    apt-get install -y --no-install-recommends \
+    git \
+    libxt-dev \
+    libxaw7-dev \
+    libx11-dev \
+    libxkbcommon-x11-dev \
+    libxi-dev \
+    libgl1-mesa-dev  \
+    libglu1-mesa-dev \
+    libxinerama-dev \
+    libxcursor-dev \
+    libnuma1 \
+    libnuma-dev \
+    libtool \
+    xutils-dev \
+    libgles2-mesa-dev \
+    libbison-dev \
+    libudev-dev \
+    libncurses5-dev \
+    libxrandr-dev \
+    libxext-dev \
+    libxfixes-dev \
+    libxrender-dev \
+    libxcb1-dev \
+    libx11-xcb-dev \
+    libxcb-glx0-dev \
+    libgl1-mesa-dri \
+    libxcb-keysyms1-dev \
+    libxcb-image0-dev \
+    libxcb-shm0-dev \
+    libxcb-icccm4-dev \
+    libxcb-sync0-dev \
+    libxcb-xfixes0-dev \
+    libxcb-shape0-dev \
+    libxcb-randr0-dev \
+    libgl1-mesa-glx \
+    mesa-utils \
+    libxcb-render-util0-dev \
+    libxcb-xinerama0-dev \
+    libxcb-xkb-dev \
+    libxcb-xinput-dev
+
+    rm -rf /var/lib/apt/lists/*
+
+    # /usr/lib/x86_64-linux-gnu/libGL*
+
+    pip install --no-cache-dir \
+        cellpose[gui]==3.0.10 \
+        dask \
+        ffmpeg \
+        graphviz \
+        matplotlib \
+        numpy \
+        opencv-python-headless \
+        pandas \
+        prefect==1.1.0 \
+        graphviz \
+        seaborn \
+        scipy \
+        nd2reader==3.3.0 \
+        networkx==2.5.1 \
+        scikit-image \
+        tifffile==2021.7.2 \
+        tiffile==2018.10.18
+
+    /opt/conda/bin/conda install -c conda-forge pyqt ipykernel libstdcxx-ng && \
+    /opt/conda/bin/conda clean -ya
+    
+    cd /opt
+    git clone https://github.com/uvarc/mitosisanalyzer.git
+    cd mitosisanalyzer
+    pip install .
+    cd /opt
+    git clone https://github.com/uvarc/mitosisanalyzer-napari.git
+    cd mitosisanalyzer-napari
+    pip install .
+
+
+%environment
+    export QT_XCB_GL_INTEGRATION=none
+    export XDG_RUNTIME_DIR=$HOME/.cache/${ID}
+
+%runscript
+    napari "$@"
