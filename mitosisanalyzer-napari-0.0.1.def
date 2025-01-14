@@ -83,7 +83,7 @@ From: pytorch/pytorch:latest
     cd mitosisanalyzer
     pip install .
     cd /opt
-    git clone https://github.com/uvarc/mitosisanalyzer-napari.git
+    git clone https://github.com/ksiller/mitosisanalyzer-napari.git
     cd mitosisanalyzer-napari
     pip install .
 
