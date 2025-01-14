@@ -1,0 +1,9 @@
+Metadata-Version: 2.1
+Name: mitosisanalyzer-napari
+Version: 0.0.1
+Classifier: Framework :: napari
+Requires-Dist: mitosisanalyzer
+Requires-Dist: napari
+Requires-Dist: napari-aicsimageio
+Requires-Dist: napari-layer-table
+Requires-Dist: napari-matplotlib

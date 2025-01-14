@@ -1,0 +1,10 @@
+pyproject.toml
+setup.cfg
+mitoanalyzer_napari/__init__.py
+mitoanalyzer_napari/track_widget.py
+mitoanalyzer_napari.egg-info/PKG-INFO
+mitoanalyzer_napari.egg-info/SOURCES.txt
+mitoanalyzer_napari.egg-info/dependency_links.txt
+mitoanalyzer_napari.egg-info/entry_points.txt
+mitoanalyzer_napari.egg-info/requires.txt
+mitoanalyzer_napari.egg-info/top_level.txt

@@ -1,0 +1,5 @@
+mitosisanalyzer
+napari
+napari-aicsimageio
+napari-layer-table
+napari-matplotlib

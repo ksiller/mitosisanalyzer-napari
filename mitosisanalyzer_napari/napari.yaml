@@ -1,0 +1,16 @@
+name: mitosisanalyzer-napari
+contributions:
+        commands:
+                - id: mitosisanalyzer-napari.about
+                  title: MitoAnalyzer About
+                  python_name: mitosisanalyzer_napari:show_about_message
+                - id: mitosisanalyzer-napari.trackeditor  
+                  title: MitoAnalyzer Track Editor
+                  python_name: mitosisanalyzer_napari.track_widget:TrackEditorWidget
+        widgets:
+                - command: mitosisanalyzer-napari.about
+                  display_name: About MitoAnalyzer
+                  autogenerate: true
+                - command: mitosisanalyzer-napari.trackeditor
+                  display_name: Edit Spindle Pole Tracks
+                  autogenerate: false
