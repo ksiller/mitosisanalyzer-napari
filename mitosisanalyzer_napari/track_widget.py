@@ -293,36 +293,36 @@ class TrackEditorWidget(QWidget):
             pole_data,
             pixel_res=self._layer_select.value.scale[-1],
         )
-        closest_points = [
-            closest_point(
-                x=p[2],
-                y=p[1],
-                z=p[0],
-                line_start=ref_p1[-1:0:-1],
-                line_end=ref_p2[-1:0:-1],
-                # pixel_res=self._layer_select.value.scale[-1],
-            )
-            for p in point_layer.data
-        ]
+        # closest_points = [
+        #    closest_point(
+        #        x=p[2],
+        #        y=p[1],
+        #        z=p[0],
+        #        line_start=ref_p1[-1:0:-1],
+        #        line_end=ref_p2[-1:0:-1],
+        #        # pixel_res=self._layer_select.value.scale[-1],
+        #    )
+        #    for p in point_layer.data
+        # ]
         sel_data = self._point_layer.selected_data.copy()
         if refresh_all:
             point_layer.selected_data = list(range(len(point_layer.data)))
         point_layer.features["Osc. Amplitude"] = pole_amps
-        point_layer.features["Closest Point"] = closest_points
-        closest_points = np.array(closest_points)
+        # point_layer.features["Closest Point"] = closest_points
+        # closest_points = np.array(closest_points)
         if axis_layer is not None:
-            print(
-                f"point_layer.data.shape={point_layer.data.shape}, closest_points.shape={closest_points.shape}"
-            )
-            print(
-                f"point_layer.data[0]={point_layer.data[0]}, closest_points[0]={closest_points[0]}"
-            )
-            vectors = np.stack((closest_points, point_layer.data), axis=1)
-            print(vectors.shape)
-            print(vectors)
+            # print(
+            #    f"point_layer.data.shape={point_layer.data.shape}, closest_points.shape={closest_points.shape}"
+            # )
+            # print(
+            #    f"point_layer.data[0]={point_layer.data[0]}, closest_points[0]={closest_points[0]}"
+            # )
+            # vectors = np.stack((closest_points, point_layer.data), axis=1)
+            # print(vectors.shape)
+            # print(vectors)
             reflines = create_line_shapes(ref_p1[2], ref_p1[1], ref_p2[2], ref_p2[1], n)
             axis_layer.data = reflines
-            axis_layer.add(vectors, shape_type=["line"] * len(vectors))
+            # axis_layer.add(vectors, shape_type=["line"] * len(vectors))
         if refresh_all:
             point_layer.data = point_layer.data.copy()
             point_layer.selected_data = sel_data
