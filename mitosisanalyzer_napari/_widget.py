@@ -114,19 +114,9 @@ class TrackEditorWidget(QWidget):
         self._viewer = viewer
         self._point_layer = None
         self._axis_layer = None
-        self._export_file = None
-        self._summary_df = pd.DataFrame(
-            {
-                "Pole 1": [np.nan, np.nan, np.nan, np.nan],
-                "Pole 2": [np.nan, np.nan, np.nan, np.nan],
-            },
-            index=[
-                "Osc. zero-crossings",
-                "Osc. frequency (FFT)",
-                "Osc. frequency (autocorr.)",
-                "Osc. dominant frequency",
-            ],
-        )
+        self._tracking_export_file = None
+        self._summary_export_file = None
+        self._summary_df = self._init_summary()
 
         # Create a button
         export_btn = QPushButton("Export to CSV")
@@ -166,6 +156,21 @@ class TrackEditorWidget(QWidget):
         self.layout().addWidget(self._ref_frame.native)
         self.layout().addWidget(export_btn)
 
+    def _init_summary(self):
+        summary_df = pd.DataFrame(
+            {
+                "Pole 1": [np.nan, np.nan, np.nan, np.nan],
+                "Pole 2": [np.nan, np.nan, np.nan, np.nan],
+            },
+            index=[
+                "Osc. zero-crossings",
+                "Osc. frequency (FFT)",
+                "Osc. frequency (autocorr.)",
+                "Osc. dominant frequency",
+            ],
+        )
+        return summary_df
+
     def _on_image_changed(self):
         print(self._layer_select.value.scale)
         if self._point_layer is not None and self._layer_select is not None:
@@ -173,10 +178,20 @@ class TrackEditorWidget(QWidget):
             self._axis_layer.scale = self._layer_select.value.scale
         self._viewer.reset_view()
 
+    def _filter_columns(self, columns, include=[], exclude=[]):
+        keep_cols = [
+            col
+            for col in columns
+            if any(substr.lower() in col.lower() for substr in include)
+            and not any(substr.lower() in col.lower() for substr in exclude)
+        ]
+        return keep_cols
+
     def _on_csv_changed(self):
         self._df = read_df(self._csv_file.value)
         path = os.path.splitext(str(self._csv_file.value))
-        self._export_file = path[0] + "-curated" + path[1]
+        self._tracking_export_file = path[0] + "-curated" + path[1]
+        self._summary_export_file = path[0] + "-frequency" + path[1]
         print(self._df.columns.values)
         no_frames = len(self._df)
         self._ref_frame.value = 0
@@ -217,16 +232,16 @@ class TrackEditorWidget(QWidget):
             "Osc. Amplitude": pole_amps,
             #    "Velocity": pole_velocities,
             "Frame": pole_data[:, 0],
-            "Angle": np.concatenate(
-                (self._df["angle"].values, self._df["angle"].values), axis=0
-            ),
-            "Embryo center (pixel)": np.concatenate(
-                (
-                    self._df["Embryo center (pixel)"].values,
-                    self._df["Embryo center (pixel)"].values,
-                ),
-                axis=0,
-            ),
+            # "Angle": np.concatenate(
+            #    (self._df["angle"].values, self._df["angle"].values), axis=0
+            # ),
+            # "Embryo center (pixel)": np.concatenate(
+            #    (
+            #        self._df["Embryo center (pixel)"].values,
+            #        self._df["Embryo center (pixel)"].values,
+            #    ),
+            #    axis=0,
+            # ),
         }
         scale = (
             self._layer_select.value.scale
@@ -365,11 +380,72 @@ class TrackEditorWidget(QWidget):
             self._point_layer, axis_layer=self._axis_layer, refresh_all=True
         )
 
+    def _spindle_dataframe(self, group=["Pole"]):
+        # get original df but exlude columns with data that are related to spindle pole positions. Those need to be recalculated.
+        core_columns = self._filter_columns(
+            self._df.columns.values,
+            include=self._df.columns.values,
+            exclude=["pole", "osc", "angle", "midzone"],
+        )
+        core_df = self._df[core_columns].copy().set_index([FRAME_COL])
+
+        # get the pole oscillations from the point layer's features. The "Frame" is zero-indexed so increment by 1.
+        osc = pd.DataFrame(self._point_layer.features)
+        osc[FRAME_COL] = (osc[FRAME_COL] + 1.0).astype(int)
+        osc = osc.set_index([FRAME_COL])
+
+        # get the spindle pole positions from the point layer's data. The "Frame" is zero-indexed so increment by 1.
+        tracks = pd.DataFrame(
+            self._point_layer.data,
+            columns=[
+                FRAME_COL,
+                POLE_ONE_Y_COL.split(",")[1],
+                POLE_ONE_X_COL.split(",")[1],
+            ],
+        )
+        tracks[FRAME_COL] = (tracks[FRAME_COL] + 1.0).astype(int)
+        tracks = tracks.set_index([FRAME_COL])
+
+        # pivot spindle pole and oscillation data from long to wide format by "Pole" column. Relabel the pivoted columns
+        spindle_df = pd.concat([tracks, osc], axis=1)
+        spindle_df = spindle_df.pivot(columns=group)
+        spindle_df.columns = [
+            f"{'|'.join(group)} {j},{i}" for i, j in spindle_df.columns
+        ]
+
+        # concatenate core, spindle pole and oscillation data
+        df = pd.concat([core_df, spindle_df], axis=1)
+        df = df[sorted(df.columns)]
+        print(df)
+
+        # pole1 = np.stack([df[POLE_ONE_X_COL].values, df[POLE_ONE_Y_COL].values], axis=0)
+        # pole2 = np.stack([df[POLE_TWO_X_COL].values, df[POLE_TWO_Y_COL].values], axis=0)
+        # print(pole1)
+        # print(pole1.shape)
+        # spindle_df["Pole-Pole Distance"] = euclidian(p1=pole1, p2=pole2)
+
+        return df
+
     def _on_export(self):
-        fpath, _ = QFileDialog.getSaveFileName(self, "Export as CSV", self._export_file)
+        # save spindle pole tracking data
+        fpath, _ = QFileDialog.getSaveFileName(
+            self, "Export spindle pole tracking data as CSV", self._tracking_export_file
+        )
         if fpath:
-            self._export_file
+            updated_df = self._spindle_dataframe()
             try:
-                self._df.to_csv(fpath, index=False)
+                updated_df.to_csv(fpath, index=True)
+                self._tracking_export_file = fpath
+            except Exception as e:
+                QMessageBox.warning(self._viewer.window.qt_viewer, "Error", e)
+
+        # save frequency analysis
+        fpath, _ = QFileDialog.getSaveFileName(
+            self, "Export frequency analysis as CSV", self._summary_export_file
+        )
+        if fpath:
+            try:
+                self._summary_df.to_csv(fpath, index=True)
+                self._summary_export_file = fpath
             except Exception as e:
                 QMessageBox.warning(self._viewer.window.qt_viewer, "Error", e)

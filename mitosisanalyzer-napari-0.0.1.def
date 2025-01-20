@@ -17,8 +17,6 @@ From: ghcr.io/napari/napari:0.5.5
     /opt/conda/bin/conda install -c conda-forge ipykernel libstdcxx-ng && \
     /opt/conda/bin/conda clean -ya
    
-    which pip
-    pip install napari[pyqt5]
     cd /opt
     git clone https://github.com/uvarc/mitosisanalyzer.git
     pip install ./mitosisanalyzer
