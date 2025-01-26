@@ -172,7 +172,9 @@ class TrackEditorWidget(QWidget):
         return summary_df
 
     def _on_image_changed(self):
-        print(self._layer_select.value.scale)
+        print(
+            f"_on_image_changed: {self._layer_select.value}, scale={self._layer_select.value.scale}"
+        )
         if self._point_layer is not None and self._layer_select is not None:
             self._point_layer.scale = self._layer_select.value.scale
             self._axis_layer.scale = self._layer_select.value.scale
@@ -187,12 +189,28 @@ class TrackEditorWidget(QWidget):
         ]
         return keep_cols
 
+    def _rearrange_layers(self):
+        """Rearranges viewer's layers so that the plugin-specfic layers are always on top"""
+        layers = self._viewer.layers
+        # get indices for plugin layers
+        plugin_layer_indices = [
+            layers.index(name) for name in [REF_AXIS_LAYER, POLE_LAYER]
+        ]
+        # get indices for all other layers not created by plugin
+        other_layer_indices = [
+            layers.index(l.name)
+            for l in layers
+            if l.name not in [REF_AXIS_LAYER, POLE_LAYER]
+        ]
+        rearranged_indices = other_layer_indices + plugin_layer_indices
+        layers.move_multiple(rearranged_indices)
+
     def _on_csv_changed(self):
         self._df = read_df(self._csv_file.value)
         path = os.path.splitext(str(self._csv_file.value))
         self._tracking_export_file = path[0] + "-curated" + path[1]
         self._summary_export_file = path[0] + "-frequency" + path[1]
-        print(self._df.columns.values)
+        print(f"on_csv_changed: column values: {self._df.columns.values}")
         no_frames = len(self._df)
         self._ref_frame.value = 0
         self._ref_frame.max = no_frames - 1
@@ -224,8 +242,9 @@ class TrackEditorWidget(QWidget):
         # )
         # print(pole_velocities)
 
-        pole_anot = p1.shape[0] * ["1"] + p2.shape[0] * ["2"]
+        pole_anot = np.array(p1.shape[0] * [1] + p2.shape[0] * [2])
         pole_colors = p1.shape[0] * ["cyan"] + p2.shape[0] * ["yellow"]
+        face_colors = ["#ffffff00"] * len(pole_colors)
         frame_str = [f"{int(row[0]):04d}" for row in pole_data]
         features = {
             "Pole": pole_anot,
@@ -248,30 +267,42 @@ class TrackEditorWidget(QWidget):
             if self._layer_select.value is not None
             else None
         )
-        self._axis_layer = self._viewer.add_shapes(
-            line_data, name=REF_AXIS_LAYER, scale=scale, shape_type="line", edge_width=1
-        )
-        self._point_layer = self._viewer.add_points(
-            pole_data,
-            name=POLE_LAYER,
-            scale=scale,
-            border_color=pole_colors,
-            face_color=["#ffffff00"] * len(pole_colors),
-            features=features,
-        )
+
+        # try to update shape layer for ref axis or add new one if it doesn't exist
+        try:
+            self._viewer.layers[REF_AXIS_LAYER].data = line_data
+            self._viewer.layers[REF_AXIS_LAYER].scale = scale
+        except KeyError:
+            self._axis_layer = self._viewer.add_shapes(
+                line_data,
+                name=REF_AXIS_LAYER,
+                scale=scale,
+                shape_type="line",
+                edge_width=1,
+            )
+
+        # try to update point layer for spindle pole data or add new one if it doesn't exist
+        try:
+            self._viewer.layers[POLE_LAYER].data = pole_data
+            self._viewer.layers[POLE_LAYER].scale = scale
+            self._viewer.layers[POLE_LAYER].border_color = pole_colors
+            self._viewer.layers[POLE_LAYER].face_color = face_colors
+            self._viewer.layers[POLE_LAYER].features = features
+        except KeyError:
+            self._point_layer = self._viewer.add_points(
+                pole_data,
+                name=POLE_LAYER,
+                scale=scale,
+                border_color=pole_colors,
+                face_color=face_colors,
+                features=features,
+            )
+
+        self._rearrange_layers()
+
         self._recalculate(
             self._point_layer, axis_layer=self._axis_layer, refresh_all=False
         )
-
-        @self._point_layer.events.data.connect
-        def _on_data(data_event):
-            print(f"_on_data: event")
-
-        @self._point_layer.events.set_data.connect
-        def _on_set_data(data_event):
-            l = data_event.source
-            print(f"_on_set_data: {l.name}")
-            # recalculate(layer=l, points=l.selected_data)
 
         @self._point_layer.mouse_drag_callbacks.append
         def _on_points_moved(layer, event):
