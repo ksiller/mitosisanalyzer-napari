@@ -1,0 +1,36 @@
+name: Apptainer Build Deploy
+
+on:
+  push:
+    branches: 
+      - main
+    tags:
+      - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
+  pull_request:
+    branches:
+      - main 
+jobs:
+  build-test-container:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    container:
+        image: quay.io/singularity/singularity:v4.1.0
+        options: --privileged
+
+    name: Build Container
+    steps:
+
+      - name: Check out code for the container builds
+        uses: actions/checkout@v4
+
+      - name: Build Container
+        run: |
+           singularity build container.sif Apptainer
+
+      - name: Login and Deploy Container
+        run: |
+           echo ${{ secrets.GITHUB_TOKEN }} | singularity remote login -u ${{ secrets.GHCR_USERNAME }} --password-stdin oras://ghcr.io
+           singularity push container.sif oras://ghcr.io/${GITHUB_REPOSITORY}:${tag}

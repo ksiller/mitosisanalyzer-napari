@@ -56,13 +56,6 @@ def read_df(path):
     return pd.read_csv(path)
 
 
-# def calc_ref_axis(ref_x1, ref_y1, ref_x2, ref_y2):
-#    ref_xy1 = np.array([ref_x1, ref_y1])
-#    ref_xy2 = np.array([ref_x2, ref_y2])
-#    ref_axis = ref_xy2 - ref_xy1
-#    return ref_axis, ref_xy1, ref_xy2
-
-
 def create_line_shapes(x1, y1, x2, y2, n=1, xlims=(0, 512)):
     if xlims is not None:
         # extend line with xlims as endpoints
@@ -86,7 +79,9 @@ class TableModel(QtCore.QAbstractTableModel):
         if role == Qt.DisplayRole:
             value = self._data.iloc[index.row(), index.column()]
             if isinstance(value, (float)):
-                return f"{{:{5+self._precision}.{self._precision}f}}".format(value)
+                return f"{{:{5+self._precision}.{self._precision}f}}".format(
+                    value
+                )
             elif isinstance(value, (int)):
                 return f"{value:5}"
             else:
@@ -231,7 +226,9 @@ class TrackEditorWidget(QWidget):
         )
 
         pole_amps = oscillation(
-            p1[ref_frame, -1:0:-1], p2[ref_frame, -1:0:-1], pole_data[:, -1:0:-1]
+            p1[ref_frame, -1:0:-1],
+            p2[ref_frame, -1:0:-1],
+            pole_data[:, -1:0:-1],
         )
         # pole_velocities = np.concatenate(
         #    (
@@ -251,16 +248,6 @@ class TrackEditorWidget(QWidget):
             "Osc. Amplitude": pole_amps,
             #    "Velocity": pole_velocities,
             "Frame": pole_data[:, 0],
-            # "Angle": np.concatenate(
-            #    (self._df["angle"].values, self._df["angle"].values), axis=0
-            # ),
-            # "Embryo center (pixel)": np.concatenate(
-            #    (
-            #        self._df["Embryo center (pixel)"].values,
-            #        self._df["Embryo center (pixel)"].values,
-            #    ),
-            #    axis=0,
-            # ),
         }
         scale = (
             self._layer_select.value.scale
@@ -279,6 +266,7 @@ class TrackEditorWidget(QWidget):
                 scale=scale,
                 shape_type="line",
                 edge_width=1,
+                edge_color="white",
             )
 
         # try to update point layer for spindle pole data or add new one if it doesn't exist
@@ -317,14 +305,18 @@ class TrackEditorWidget(QWidget):
 
             # on release
             sel_points = layer.selected_data
-            refresh_all = self._viewer.dims.current_step[0] == self._ref_frame.value
+            refresh_all = (
+                self._viewer.dims.current_step[0] == self._ref_frame.value
+            )
             print(
                 "mouse released",
                 len(sel_points),
                 f"currently selected points, points={sel_points}, refresh_all={refresh_all}",
             )
             self._recalculate(
-                self._point_layer, axis_layer=self._axis_layer, refresh_all=refresh_all
+                self._point_layer,
+                axis_layer=self._axis_layer,
+                refresh_all=refresh_all,
             )
 
     def _recalculate(self, point_layer, axis_layer=None, refresh_all=False):
@@ -366,7 +358,9 @@ class TrackEditorWidget(QWidget):
             # vectors = np.stack((closest_points, point_layer.data), axis=1)
             # print(vectors.shape)
             # print(vectors)
-            reflines = create_line_shapes(ref_p1[2], ref_p1[1], ref_p2[2], ref_p2[1], n)
+            reflines = create_line_shapes(
+                ref_p1[2], ref_p1[1], ref_p2[2], ref_p2[1], n
+            )
             axis_layer.data = reflines
             # axis_layer.add(vectors, shape_type=["line"] * len(vectors))
         if refresh_all:
@@ -460,7 +454,9 @@ class TrackEditorWidget(QWidget):
     def _on_export(self):
         # save spindle pole tracking data
         fpath, _ = QFileDialog.getSaveFileName(
-            self, "Export spindle pole tracking data as CSV", self._tracking_export_file
+            self,
+            "Export spindle pole tracking data as CSV",
+            self._tracking_export_file,
         )
         if fpath:
             updated_df = self._spindle_dataframe()

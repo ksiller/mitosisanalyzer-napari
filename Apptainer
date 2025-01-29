@@ -18,12 +18,6 @@ From: ghcr.io/napari/napari:0.5.5
     /opt/conda/bin/conda clean -ya
    
     cd /opt
-    git clone https://github.com/ksiller/napari-matplotlib.git
-    pip install -e ./napari-matplotlib
-
-    git clone https://github.com/uvarc/mitosisanalyzer.git
-    pip install ./mitosisanalyzer
-
     git clone https://github.com/ksiller/mitosisanalyzer-napari.git
     pip install -e ./mitosisanalyzer-napari
 
